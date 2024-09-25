@@ -22,7 +22,7 @@ const registerUser = asyncHandler(async (req, res) => {
   } else if (!email.includes("@")) {
     throw new ApiError(400, "Please provide valid email type");
   } else if (
-    User.findOne({
+    await User.findOne({
       $or: [{ email }, { userName }],
     })
   ) {
@@ -32,7 +32,15 @@ const registerUser = asyncHandler(async (req, res) => {
     );
   }
   const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
+
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar is required");
   }
@@ -41,15 +49,18 @@ const registerUser = asyncHandler(async (req, res) => {
   if (!avatar) {
     throw new ApiError(400, "Avatar file is required");
   }
-  console.log("Request Data", avatar);
   const user = await User.create({
     fullName,
     email,
+    password,
     userName: userName.toLowerCase(),
     avatar: avatar.url,
-    coverImage: coverImage.url || "", //Checks if cover image is present or not
+    coverImage: coverImage?.url || "", //Checks if cover image is present or not
   });
-  const createdUser = User.findById(user._id).select("-password -refreshToken");
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken" // Removes password and refresh token from user
+  );
+
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering the user");
   }
