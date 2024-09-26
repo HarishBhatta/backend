@@ -124,5 +124,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-const logOut = asyncHandler(async (req, res) => {});
+const logOut = asyncHandler(async (req, res) => {
+  const user = await User.findById();
+});
 export { registerUser, loginUser };
