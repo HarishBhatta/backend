@@ -270,6 +270,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
+  if (!user) {
+    throw new ApiError(500, "Error occured when pushing file to the database");
+  }
   return res.status(200).json(new ApiResponse(200, "User Avatar Updated"));
 });
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -289,6 +292,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     { $set: { coverImage: newCoverImage } },
     { new: true }
   );
+  if (!user) {
+    throw new ApiError(
+      500,
+      "Error occurred when pushing the file to the database"
+    );
+  }
   return res
     .status(200)
     .json(new ApiResponse(200, "Cover image uploaded successfully"));
