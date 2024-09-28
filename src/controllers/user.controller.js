@@ -412,6 +412,13 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                     avatar: 1,
                   },
                 },
+                {
+                  $addFields: {
+                    channelName: {
+                      $first: "$channelName",
+                    },
+                  },
+                },
               ],
             },
           },
@@ -419,6 +426,12 @@ const getWatchHistory = asyncHandler(async (req, res) => {
       },
     },
   ]);
+  if (!user.length) {
+    throw new ApiError(404, "Channel not found");
+  }
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Channel fetched successfully"));
 });
 
 export {
