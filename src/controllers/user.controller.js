@@ -4,6 +4,9 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+
+//Generate access and refresh token
 const generateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -19,6 +22,8 @@ const generateAccessAndRefreshToken = async (userId) => {
     );
   }
 };
+
+// Register User
 const registerUser = asyncHandler(async (req, res) => {
   // Get the data from the user
   //Check if the user already exists
@@ -85,6 +90,7 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(201, createdUser, "User Registered Successfully"));
 });
 
+//Login User
 const loginUser = asyncHandler(async (req, res) => {
   //Get user data
   //Verify user data
@@ -130,6 +136,7 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
+//Logout User
 const logOutUser = asyncHandler(async (req, res) => {
   console.log("This is logout");
   const user = await User.findByIdAndUpdate(
@@ -152,6 +159,7 @@ const logOutUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
+// Resfresh access token
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
     req.cookies.refreshToken || req.body.refreshToken;
@@ -197,6 +205,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
+// Change User password
 const changeCurrentUserPassword = asyncHandler(async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
@@ -215,6 +224,7 @@ const changeCurrentUserPassword = asyncHandler(async (req, res) => {
   }
 });
 
+//Get user details
 const getCurrentUser = asyncHandler(async (req, res) => {
   try {
     const user = req.user;
@@ -226,6 +236,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   }
 });
 
+// Update account details
 const updateAccountDetails = asyncHandler(async (req, res) => {
   try {
     const { fullName, email } = req.body;
@@ -250,6 +261,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
   }
 });
 
+// Update user avatar
 const updateUserAvatar = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path;
   if (!avatarLocalPath) {
@@ -273,6 +285,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   }
   return res.status(200).json(new ApiResponse(200, "User Avatar Updated"));
 });
+
+// Update cover image
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImage = req.file?.path;
   if (!coverImage) {
@@ -301,6 +315,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, "Cover image uploaded successfully"));
 });
 
+// Get channel
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { userName } = req.params;
   if (!userName?.trim()) {
@@ -360,7 +375,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
   ]);
-  console.log("Channel", channel);
   if (!channel.length) {
     throw new ApiError(404, "Channel does not exist");
   }
@@ -368,6 +382,45 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, channel[0], "Channel fetched successfully"));
 });
+
+// Get watch history
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId.createFromHexString(req.user._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "channelName",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    userName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ]);
+});
+
 export {
   registerUser,
   loginUser,
