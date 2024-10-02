@@ -14,6 +14,7 @@ const generateAccessAndRefreshToken = async (userId) => {
     const refreshToken = user.generateRefreshToken();
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
+    console.log("Tokens in Generate", accessToken, refreshToken);
     return { accessToken, refreshToken };
   } catch (error) {
     throw new ApiError(
@@ -119,9 +120,12 @@ const loginUser = asyncHandler(async (req, res) => {
   const { refreshToken, accessToken } = await generateAccessAndRefreshToken(
     user._id
   );
-  const loggedInUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  ); // Because the user we initially got from the database will not have the token we again get the user
+  const loggedInUser = await User.findByIdAndUpdate(user._id, {
+    $set: {
+      refreshToken,
+    },
+  }).select("-password -refreshToken"); // Because the user we initially got from the database will not have the token we again get the user
+  console.log("Logged in user", await User.findById(user._id));
   const options = { httpOnly: true, secure: true };
   return res
     .status(200)
@@ -162,7 +166,8 @@ const logOutUser = asyncHandler(async (req, res) => {
 // Resfresh access token
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
-    req.cookies.refreshToken || req.body.refreshToken;
+    req.cookies.refreshToken || req.body?.refreshToken;
+  console.log("Incoming Refresh token", incomingRefreshToken);
   if (!incomingRefreshToken) {
     throw new ApiError(401, "Unauthorized Access");
   }
@@ -171,20 +176,23 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       incomingRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
+    console.log("Decoded token", decodedToken);
     const user = await User.findById(decodedToken._id);
     if (!user) {
-      throw new ApiError(401, "Invalid refresh token");
+      throw new ApiError(401, "Invalid Refresh token");
     }
-    if (incomingRefreshToken === user?.refreshToken) {
+    console.log(user.refreshToken);
+    console.log("Comparisons", user.incomingRefreshToken === user.refreshToken);
+    if (incomingRefreshToken !== user?.refreshToken) {
       throw new ApiError(
         401,
         "Refresh access token is expired or already used"
       );
     }
-    const accessToken = (await generateAccessAndRefreshToken(user?._id))
-      .accessToken;
-    const newRefreshToken = (await generateAccessAndRefreshToken(user?._id))
-      .refreshToken;
+    const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+      user?._id
+    );
+    console.log("Tokens", accessToken, refreshToken);
     const options = {
       httpOnly: true,
       secure: true,
@@ -196,12 +204,12 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
       .json(
         new ApiResponse(
           200,
-          { accessToken, refreshToken: newRefreshToken },
+          { accessToken, refreshToken: refreshToken },
           "Access token refreshed"
         )
       );
   } catch (error) {
-    throw new ApiError(401, "Invalid Refresh Token");
+    throw new ApiError(401, "Refresh error at server");
   }
 });
 
