@@ -146,8 +146,8 @@ const logOutUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,
       },
     },
     { new: true } // This causes the return value to be the one that is updated. i.e refreshToken: undefined
@@ -395,7 +395,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId.createFromHexString(req.user._id),
+        _id: new mongoose.Types.ObjectId(req.user._id),
       },
     },
     {
