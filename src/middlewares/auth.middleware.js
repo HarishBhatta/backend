@@ -2,7 +2,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import { User } from "../models/user.model.js";
-export const verifyJWT = asyncHandler(async (req, _, next) => {
+import { json } from "express";
+export const verifyJWT = asyncHandler(async (req, res, next) => {
   //Since no need for res so _
   try {
     const token =
